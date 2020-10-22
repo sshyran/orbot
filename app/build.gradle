@@ -117,6 +117,11 @@ android {
 
     }
 
+    repositories {
+        flatDir {
+            dir 'libs'
+        }
+    }
 }
 
 
@@ -130,6 +135,7 @@ dependencies {
     androidTestImplementation "tools.fastlane:screengrab:1.2.0"
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
     implementation 'com.android.volley:volley:1.1.1'
+
 }
 
 // Map for the version code that gives each ABI a value.
