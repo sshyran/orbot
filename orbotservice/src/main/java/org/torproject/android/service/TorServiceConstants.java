@@ -106,6 +106,8 @@ public interface TorServiceConstants {
     String CMD_SET_EXIT = "setexit";
     String CMD_ACTIVE = "ACTIVE";
 
+    String CMD_START_SNOWFLAKE_PROXY = "snowflake_proxy_start";
+
     String PREF_BINARY_TOR_VERSION_INSTALLED = "BINARY_TOR_VERSION_INSTALLED";
 
     //obfsproxy

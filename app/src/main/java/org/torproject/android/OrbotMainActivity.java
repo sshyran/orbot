@@ -94,6 +94,7 @@ import static org.torproject.android.MainConstants.URL_TOR_CHECK;
 import static org.torproject.android.service.TorServiceConstants.ACTION_START;
 import static org.torproject.android.service.TorServiceConstants.ACTION_START_VPN;
 import static org.torproject.android.service.TorServiceConstants.ACTION_STOP_VPN;
+import static org.torproject.android.service.TorServiceConstants.CMD_START_SNOWFLAKE_PROXY;
 import static org.torproject.android.service.TorServiceConstants.DIRECTORY_TOR_DATA;
 import static org.torproject.android.service.TorServiceConstants.STATUS_OFF;
 import static org.torproject.android.service.TorServiceConstants.STATUS_ON;
@@ -468,7 +469,10 @@ public class OrbotMainActivity extends AppCompatActivity implements OrbotConstan
             startActivity(new Intent(this, HiddenServicesActivity.class));
         } else if (item.getItemId() == R.id.menu_client_cookies) {
             startActivity(new Intent(this, ClientCookiesActivity.class));
+        } else if (item.getItemId() == R.id.menu_snowflake_proxy_start) {
+            sendIntentToService(CMD_START_SNOWFLAKE_PROXY);
         }
+
 
         return super.onOptionsItemSelected(item);
     }

@@ -82,8 +82,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 
 import IPtProxy.IPtProxy;
-import info.pluggabletransports.dispatch.util.TransportListener;
-import info.pluggabletransports.dispatch.util.TransportManager;
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class OrbotService extends VpnService implements TorServiceConstants, OrbotConstants {
@@ -500,7 +498,18 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
 
     private boolean startObfs4 () {
 
-        IPtProxy.startObfs4Proxy();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                Os.setenv("TMPDIR","/data/local/tmp",true);
+
+                IPtProxy.startObfs4Proxy("debug",false,false);
+
+                logNotice("Obfs4 SOCKS port: " + IPtProxy.Obfs4SocksPort);
+
+            } catch (ErrnoException e) {
+                e.printStackTrace();
+            }
+        }
 
         return true;
 
@@ -527,6 +536,46 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
 
                 logNotice("Snowflake SOCKS port: " + IPtProxy.SnowflakeSocksPort);
 
+                return true;
+            } catch (ErrnoException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        return false;
+    }
+
+    private boolean startSnowflakeProxy ()
+    {
+        sendCallbackLogMessage ("Starting Snowflake Proxy...");
+
+        /** Start the Snowflake proxy
+         * capacity: maximum concurrent clients
+         * broker: broker URL
+         * relay: websocket relay URL
+         * stunURL: stun URL
+         * log: log filename
+         * unsafe-logging: prevent logs from being scrubbed
+         * keep-local-addresses: keep local LAN address ICE candidates
+         **/
+        long capacity = 1;
+        String stunUrl = "stun:stun.stunprotocol.org:3478";
+        String brokerUrl = "https://snowflake-broker.azureedge.net/";
+        String relayUrl = "wss://snowflake.bamsoftware.com";
+        String logFile = new File(getFilesDir(),"snowflakeproxylog.txt").getAbsolutePath();
+        boolean keepLocalAddresses = false;
+        boolean unsafeLogging = false;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                Os.setenv("TMPDIR","/data/local/tmp",true);
+
+                IPtProxy.startSnowflakeProxy(capacity, stunUrl, logFile, relayUrl, brokerUrl, unsafeLogging, keepLocalAddresses);
+
+                logNotice("Snowflake proxy started: " + IPtProxy.SnowflakeSocksPort);
+
+                return true;
             } catch (ErrnoException e) {
                 e.printStackTrace();
             }
@@ -1862,7 +1911,8 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
                 } else if (action.equals(CMD_SET_EXIT)) {
 
                     setExitNode(mIntent.getStringExtra("exit"));
-
+                } else if (action.equals(CMD_START_SNOWFLAKE_PROXY)) {
+                    startSnowflakeProxy();
                 } else {
                     Log.w(OrbotConstants.TAG, "unhandled OrbotService Intent: " + action);
                 }
