@@ -30,6 +30,8 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.BaseColumns;
+import android.system.ErrnoException;
+import android.system.Os;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -79,9 +81,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 
+import IPtProxy.IPtProxy;
 import info.pluggabletransports.dispatch.util.TransportListener;
 import info.pluggabletransports.dispatch.util.TransportManager;
 
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class OrbotService extends VpnService implements TorServiceConstants, OrbotConstants {
 
     public final static String BINARY_TOR_VERSION = org.torproject.android.binary.TorServiceConstants.BINARY_TOR_VERSION;
@@ -494,6 +498,36 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
         return false;
     }
 
+    private boolean startSnowflake () {
+
+        sendCallbackLogMessage ("Starting Snowflake connection...");
+
+        //func StartSnowflake(ice, url, front, logFile string, logToStateDir, keepLocalAddresses, unsafeLogging bool, maxPeers int) {
+        String ice = "stun:stun.l.google.com:19302";
+        String url = "https://snowflake-broker.azureedge.net/";
+        String front = "ajax.aspnetcdn.com";
+        String logFile = new File(getFilesDir(),"snowflakelog.txt").getAbsolutePath();
+        boolean logToStateDir = false;
+        boolean keepLocalAddresses = false;
+        boolean unsafeLogging = false;
+        long maxPeers = 3;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                Os.setenv("TMPDIR","/data/local/tmp",true);
+                IPtProxy.startSnowflake(ice, url, front, logFile, logToStateDir, keepLocalAddresses, unsafeLogging, maxPeers);
+
+                logNotice("Snowflake SOCKS port: " + IPtProxy.SnowflakeSocksPort);
+
+            } catch (ErrnoException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        return false;
+    }
+
     private boolean torUpgradeAndConfig() throws IOException, TimeoutException {
 
         SharedPreferences prefs = Prefs.getSharedPrefs(getApplicationContext());
@@ -596,7 +630,7 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
         extraLines.append("AutomapHostsOnResolve 1").append('\n');
 
         extraLines.append("DormantClientTimeout 10 minutes").append('\n');
-        // extraLines.append("DormantOnFirstStartup 0").append('\n');
+        extraLines.append("DormantOnFirstStartup 0").append('\n');
         extraLines.append("DormantCanceledByStartup 1").append('\n');
 
         extraLines.append("DisableNetwork 0").append('\n');
@@ -820,6 +854,12 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
 
         if ((!fileTorrcCustom.exists()) || (!fileTorrcCustom.canRead()))
             return false;
+
+
+        String bridgeList = Prefs.getBridgesList();
+        boolean snowflakeBridges = bridgeList.contains("snowflake");
+        if (snowflakeBridges)
+            startSnowflake();
 
         sendCallbackLogMessage(getString(R.string.status_starting_up));
 
@@ -1394,6 +1434,8 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
                 boolean obfs3Bridges = bridgeList.contains("obfs3");
                 boolean obfs4Bridges = bridgeList.contains("obfs4");
                 boolean meekBridges = bridgeList.contains("meek");
+                boolean snowflakeBridges = bridgeList.contains("snowflake");
+
 
                 //check if any PT bridges are needed
                 if (obfs3Bridges)
@@ -1407,7 +1449,10 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
                 if (meekBridges)
                     extraLines.append("ClientTransportPlugin meek_lite exec " + fileObfsclient.getCanonicalPath()).append('\n');
 
-                if (bridgeList != null && bridgeList.length() > 5) //longer then 1 = some real values here
+                if (snowflakeBridges)
+                    extraLines.append("ClientTransportPlugin snowflake socks5 127.0.0.1:" + IPtProxy.SnowflakeSocksPort).append('\n');
+
+                if (bridgeList != null && bridgeList.length() > 10) //longer then 10 = some real values here
                 {
                     String[] bridgeListLines = parseBridgesFromSettings(bridgeList);
                     int bridgeIdx = (int) Math.floor(Math.random() * ((double) bridgeListLines.length));
@@ -1430,6 +1475,9 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
 
                     if (meekBridges)
                         type = "meek_lite";
+
+                    if (snowflakeBridges)
+                        type = "snowflake";
 
                     getBridges(type, extraLines);
 

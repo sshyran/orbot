@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -41,6 +42,7 @@ public class BridgeWizardActivity extends AppCompatActivity {
     private RadioButton mBtObfs4;
     private RadioButton mBtMeek;
     private RadioButton mBtCustom;
+    private RadioButton mBtSnowflake;
     private View mBtnConfgiureCustomBridges;
 
     @SuppressWarnings("SameParameterValue")
@@ -136,6 +138,14 @@ public class BridgeWizardActivity extends AppCompatActivity {
             }
         });
 
+        mBtSnowflake = findViewById(R.id.btnBridgesSnowflake);
+        mBtSnowflake.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (!isChecked) return;
+            Prefs.setBridgesList("snowflake");
+            Prefs.putBridgesEnabled(true);
+            testBridgeConnection();
+        });
+
         mBtnConfgiureCustomBridges = findViewById(R.id.btnConfigureCustomBridges);
         mBtnConfgiureCustomBridges.setOnClickListener(v ->
                 startActivityForResult(new Intent(BridgeWizardActivity.this, CustomBridgesActivity.class), CUSTOM_BRIDGES_REQUEST_CODE));
@@ -186,6 +196,8 @@ public class BridgeWizardActivity extends AppCompatActivity {
         HostTester hostTester = new HostTester(this);
         if (TextUtils.isEmpty(Prefs.getBridgesList()) || (!Prefs.bridgesEnabled())) {
             hostTester.execute("check.torproject.org", "443");
+        } else if (Prefs.getBridgesList().equals("snowflake")) {
+            hostTester.execute("ajax.aspnetcdn.com", "443");
         } else if (Prefs.getBridgesList().equals("meek")) {
             hostTester.execute("meek.azureedge.net", "443");
         } else if (Prefs.getBridgesList().equals("obfs4")) {
@@ -249,6 +261,9 @@ public class BridgeWizardActivity extends AppCompatActivity {
             mBtMeek.setChecked(true);
         } else if (Prefs.getBridgesList().equals("obfs4")) {
             mBtObfs4.setChecked(true);
+        }
+        else if (Prefs.getBridgesList().equals("snowflake")) {
+            mBtSnowflake.setChecked(true);
         } else {
             mBtCustom.setChecked(true);
         }
