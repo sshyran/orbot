@@ -104,7 +104,6 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
     public static File appBinHome;
     public static File appCacheHome;
     public static File fileTor;
-    public static File fileObfsclient;
     public static File fileTorRc;
     boolean mIsLollipop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP;
     TorEventHandler mEventHandler;
@@ -444,7 +443,7 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
 
             torUpgradeAndConfig();
 
-            pluggableTransportInstall();
+            //pluggableTransportInstall();
 
             new Thread(() -> {
                 try {
@@ -476,6 +475,7 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
         return mCurrentStatus;
     }
 
+    /**
     private boolean pluggableTransportInstall() {
 
         fileObfsclient = new TransportManager() {
@@ -496,6 +496,14 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
         }
 
         return false;
+    }**/
+
+    private boolean startObfs4 () {
+
+        IPtProxy.startObfs4Proxy();
+
+        return true;
+
     }
 
     private boolean startSnowflake () {
@@ -857,9 +865,12 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
 
 
         String bridgeList = Prefs.getBridgesList();
+        boolean meekObfsBridges = bridgeList.contains("meek")||bridgeList.contains("obfs");
         boolean snowflakeBridges = bridgeList.contains("snowflake");
         if (snowflakeBridges)
             startSnowflake();
+        else if (meekObfsBridges)
+            startObfs4();
 
         sendCallbackLogMessage(getString(R.string.status_starting_up));
 
@@ -1421,70 +1432,62 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
                 }
             }
         } else {
-            if (fileObfsclient != null
-                    && fileObfsclient.exists()
-                    && fileObfsclient.canExecute()) {
 
-                loadBridgeDefaults();
+            loadBridgeDefaults();
 
-                extraLines.append("UseBridges 1").append('\n');
-                //    extraLines.append("UpdateBridgesFromAuthority 1").append('\n');
+            extraLines.append("UseBridges 1").append('\n');
+            //    extraLines.append("UpdateBridgesFromAuthority 1").append('\n');
 
-                String bridgeList = Prefs.getBridgesList();
-                boolean obfs3Bridges = bridgeList.contains("obfs3");
-                boolean obfs4Bridges = bridgeList.contains("obfs4");
-                boolean meekBridges = bridgeList.contains("meek");
-                boolean snowflakeBridges = bridgeList.contains("snowflake");
+            String bridgeList = Prefs.getBridgesList();
+            boolean obfs3Bridges = bridgeList.contains("obfs3");
+            boolean obfs4Bridges = bridgeList.contains("obfs4");
+            boolean meekBridges = bridgeList.contains("meek");
+            boolean snowflakeBridges = bridgeList.contains("snowflake");
 
+            //check if any PT bridges are needed
+            if (obfs3Bridges)
+                extraLines.append("ClientTransportPlugin obfs3 socks5 127.0.0.1:" + IPtProxy.Obfs3SocksPort).append('\n');
 
-                //check if any PT bridges are needed
-                if (obfs3Bridges)
-                    extraLines.append("ClientTransportPlugin obfs3 exec ")
-                            .append(fileObfsclient.getAbsolutePath()).append('\n');
+            if (obfs4Bridges)
+                extraLines.append("ClientTransportPlugin obfs4 socks5 127.0.0.1:" + IPtProxy.Obfs4SocksPort).append('\n');
 
-                if (obfs4Bridges)
-                    extraLines.append("ClientTransportPlugin obfs4 exec ")
-                            .append(fileObfsclient.getAbsolutePath()).append('\n');
+            if (meekBridges)
+                extraLines.append("ClientTransportPlugin meek_lite 127.0.0.1:" + IPtProxy.MeekSocksPort).append('\n');
+
+            if (snowflakeBridges)
+                extraLines.append("ClientTransportPlugin snowflake socks5 127.0.0.1:" + IPtProxy.SnowflakeSocksPort).append('\n');
+
+            if (bridgeList != null && bridgeList.length() > 10) //longer then 10 = some real values here
+            {
+                String[] bridgeListLines = parseBridgesFromSettings(bridgeList);
+                int bridgeIdx = (int) Math.floor(Math.random() * ((double) bridgeListLines.length));
+                String bridgeLine = bridgeListLines[bridgeIdx];
+                extraLines.append("Bridge ");
+                extraLines.append(bridgeLine);
+                extraLines.append("\n");
+                /**
+                 for (String bridgeConfigLine : bridgeListLines) {
+                 if (!TextUtils.isEmpty(bridgeConfigLine)) {
+                 extraLines.append("Bridge ");
+                 extraLines.append(bridgeConfigLine.trim());
+                 extraLines.append("\n");
+                 }
+
+                 }**/
+            } else {
+
+                String type = "obfs4";
 
                 if (meekBridges)
-                    extraLines.append("ClientTransportPlugin meek_lite exec " + fileObfsclient.getCanonicalPath()).append('\n');
+                    type = "meek_lite";
 
                 if (snowflakeBridges)
-                    extraLines.append("ClientTransportPlugin snowflake socks5 127.0.0.1:" + IPtProxy.SnowflakeSocksPort).append('\n');
+                    type = "snowflake";
 
-                if (bridgeList != null && bridgeList.length() > 10) //longer then 10 = some real values here
-                {
-                    String[] bridgeListLines = parseBridgesFromSettings(bridgeList);
-                    int bridgeIdx = (int) Math.floor(Math.random() * ((double) bridgeListLines.length));
-                    String bridgeLine = bridgeListLines[bridgeIdx];
-                    extraLines.append("Bridge ");
-                    extraLines.append(bridgeLine);
-                    extraLines.append("\n");
-                    /**
-                     for (String bridgeConfigLine : bridgeListLines) {
-                     if (!TextUtils.isEmpty(bridgeConfigLine)) {
-                     extraLines.append("Bridge ");
-                     extraLines.append(bridgeConfigLine.trim());
-                     extraLines.append("\n");
-                     }
+                getBridges(type, extraLines);
 
-                     }**/
-                } else {
-
-                    String type = "obfs4";
-
-                    if (meekBridges)
-                        type = "meek_lite";
-
-                    if (snowflakeBridges)
-                        type = "snowflake";
-
-                    getBridges(type, extraLines);
-
-                }
-            } else {
-                throw new IOException("Bridge binary does not exist: " + fileObfsclient.getCanonicalPath());
             }
+
         }
 
 
