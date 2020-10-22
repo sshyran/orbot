@@ -498,18 +498,24 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
 
     private boolean startObfs4 () {
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            try {
-                Os.setenv("TMPDIR","/data/local/tmp",true);
 
-                IPtProxy.startObfs4Proxy("debug",false,false);
+        File fileObfs4Cache = new File(getFilesDir(),"obfs4");
+        fileObfs4Cache.mkdirs();
+        IPtProxy.startObfs4Proxy("debug",fileObfs4Cache.getAbsolutePath(),false,false);
 
-                logNotice("Obfs4 SOCKS port: " + IPtProxy.Obfs4SocksPort);
+        logNotice("Obfs4 SOCKS port: " + IPtProxy.Obfs4SocksPort);
 
-            } catch (ErrnoException e) {
-                e.printStackTrace();
-            }
-        }
+        return true;
+
+    }
+
+    private boolean startMeek () {
+
+        File fileObfs4Cache = new File(getFilesDir(),"meek");
+        fileObfs4Cache.mkdirs();
+        IPtProxy.startObfs4Proxy("debug",fileObfs4Cache.getAbsolutePath(),false,false);
+
+        logNotice("Meek SOCKS port: " + IPtProxy.MeekSocksPort);
 
         return true;
 
@@ -529,19 +535,8 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
         boolean unsafeLogging = false;
         long maxPeers = 3;
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            try {
-                Os.setenv("TMPDIR","/data/local/tmp",true);
-                IPtProxy.startSnowflake(ice, url, front, logFile, logToStateDir, keepLocalAddresses, unsafeLogging, maxPeers);
-
-                logNotice("Snowflake SOCKS port: " + IPtProxy.SnowflakeSocksPort);
-
-                return true;
-            } catch (ErrnoException e) {
-                e.printStackTrace();
-            }
-        }
-
+        IPtProxy.startSnowflake(ice, url, front, logFile, logToStateDir, keepLocalAddresses, unsafeLogging, maxPeers);
+        logNotice("Snowflake SOCKS port: " + IPtProxy.SnowflakeSocksPort);
 
         return false;
     }
@@ -569,7 +564,7 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
-                Os.setenv("TMPDIR","/data/local/tmp",true);
+                Os.setenv("TMPDIR",getCacheDir().getAbsolutePath(),true);
 
                 IPtProxy.startSnowflakeProxy(capacity, stunUrl, logFile, relayUrl, brokerUrl, unsafeLogging, keepLocalAddresses);
 
@@ -914,12 +909,16 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
 
 
         String bridgeList = Prefs.getBridgesList();
-        boolean meekObfsBridges = bridgeList.contains("meek")||bridgeList.contains("obfs");
+        boolean obfs4Bridges = bridgeList.contains("obfs4");
         boolean snowflakeBridges = bridgeList.contains("snowflake");
+        boolean meekBridges = bridgeList.contains("meek");
+
         if (snowflakeBridges)
             startSnowflake();
-        else if (meekObfsBridges)
+        else if (obfs4Bridges)
             startObfs4();
+        else if (meekBridges)
+            startMeek();
 
         sendCallbackLogMessage(getString(R.string.status_starting_up));
 
@@ -1501,7 +1500,7 @@ public class OrbotService extends VpnService implements TorServiceConstants, Orb
                 extraLines.append("ClientTransportPlugin obfs4 socks5 127.0.0.1:" + IPtProxy.Obfs4SocksPort).append('\n');
 
             if (meekBridges)
-                extraLines.append("ClientTransportPlugin meek_lite 127.0.0.1:" + IPtProxy.MeekSocksPort).append('\n');
+                extraLines.append("ClientTransportPlugin meek_lite socks5 127.0.0.1:" + IPtProxy.MeekSocksPort).append('\n');
 
             if (snowflakeBridges)
                 extraLines.append("ClientTransportPlugin snowflake socks5 127.0.0.1:" + IPtProxy.SnowflakeSocksPort).append('\n');
