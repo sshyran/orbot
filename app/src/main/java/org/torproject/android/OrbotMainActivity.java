@@ -113,7 +113,7 @@ public class OrbotMainActivity extends AppCompatActivity implements OrbotConstan
 
     // this is what takes messages or values from the callback threads or other non-mainUI threads
     // and passes them back into the main UI thread for display to the user
-    private final Handler mStatusUpdateHandler = new MainActivityStatusUpdateHandler(this);
+    private Handler mStatusUpdateHandler;
     PulsatorLayout mPulsator;
     AlertDialog aDialog;
     /* Useful UI bits */
@@ -209,6 +209,8 @@ public class OrbotMainActivity extends AppCompatActivity implements OrbotConstan
         super.onCreate(savedInstanceState);
 
         mPrefs = Prefs.getSharedPrefs(getApplicationContext());
+
+        mStatusUpdateHandler = new MainActivityStatusUpdateHandler(this);
 
         /* Create the widgets before registering for broadcasts to guarantee
          * that the widgets exist when the status updates try to update them */
