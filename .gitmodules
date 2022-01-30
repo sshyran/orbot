@@ -6,3 +6,6 @@
 	path = external/jsocks
 	url = https://github.com/guardianproject/jsocks.git
 	ignore = dirty
+[submodule "external/leaf"]
+	path = external/leaf
+	url = https://github.com/eycorsican/leaf
