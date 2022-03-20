@@ -575,13 +575,13 @@ public class OrbotService extends VpnService implements OrbotConstants {
         if (prefs.getBoolean(OrbotConstants.PREF_DISABLE_IPV4, false)) {
             ipv6Pref += " IPv6Traffic NoIPv4Traffic ";
         }
-
-        extraLines.append("SOCKSPort ").append(socksPortPref).append(isolate).append(ipv6Pref).append('\n');
+        if (!Prefs.openProxyOnAllInterfaces()) {
+            extraLines.append("SOCKSPort ").append(socksPortPref).append(isolate).append(ipv6Pref).append('\n');
+        } else {
+            extraLines.append("SOCKSPort 0.0.0.0:").append(socksPortPref).append('\n');
+        }
         extraLines.append("SafeSocks 0").append('\n');
         extraLines.append("TestSocks 0").append('\n');
-
-        if (Prefs.openProxyOnAllInterfaces())
-            extraLines.append("SocksListenAddress 0.0.0.0").append('\n');
 
 
         extraLines.append("HTTPTunnelPort ").append(httpPortPref).append(isolate).append('\n');
@@ -638,6 +638,7 @@ public class OrbotService extends VpnService implements OrbotConstants {
 
         File fileTorRcCustom = TorService.getTorrc(this);
         updateTorConfigCustom(fileTorRcCustom, extraLines.toString());
+        Log.d("bim", extraLines.toString());
         return fileTorRcCustom;
     }
 
